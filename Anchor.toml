@@ -1,0 +1,20 @@
+[package]
+name = "smart_wallet"
+version = "0.1.0"
+edition = "2021"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[programs.devnet]
+smart_wallet = "4nsD1dKtbA9CpxD5vyN2eVQX7LhvxEWdxPyQJ5r83Kf5"
+
+[programs.localnet]
+smart_wallet = "4nsD1dKtbA9CpxD5vyN2eVQX7LhvxEWdxPyQJ5r83Kf5"
+
+[registry]
+url = "https://api.github.com/repos/coral-xyz/anchor-registry/contents/registry.json"
+
+[scripts]
+test = "bash ./scripts/test.sh"

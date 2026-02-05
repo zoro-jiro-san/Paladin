@@ -1,0 +1,18 @@
+[package]
+name = "smart_wallet"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anchor-lang = "0.29.0"
+anchor-spl = "0.29.0"
+solana-program = "1.18.20"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+overflow-checks = true
+opt-level = 3
+lto = true
+codegen-units = 1
