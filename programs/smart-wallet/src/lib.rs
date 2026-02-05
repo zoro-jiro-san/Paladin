@@ -14,14 +14,14 @@ pub mod smart_wallet {
         authority: Pubkey,
         daily_limit: u64,
     ) -> Result<()> {
-        let wallet = &mut ctx.accounts.smart_wallet;
+        let wallet = &mut ctx.accounts.wallet;
         wallet.authority = authority;
         wallet.vault = ctx.accounts.vault.key();
         wallet.daily_limit = daily_limit;
         wallet.spent_today = 0;
         wallet.last_reset = Clock::get()?.unix_timestamp;
         wallet.nonce = 0;
-        wallet.bump = ctx.bumps.smart_wallet;
+        wallet.bump = 0; // Will be set to proper PDA bump seed if needed
         wallet.plugins = Vec::new();
         
         Ok(())
@@ -58,7 +58,7 @@ pub mod smart_wallet {
         ctx: Context<TransferSol>,
         amount: u64,
     ) -> Result<()> {
-        let wallet = &mut ctx.accounts.smart_wallet;
+        let wallet = &mut ctx.accounts.wallet;
         let clock = Clock::get()?;
         
         // Reset daily limit if needed
@@ -143,7 +143,7 @@ pub mod smart_wallet {
         plugin_type: PluginType,
         config: Vec<u8>,
     ) -> Result<()> {
-        let wallet = &mut ctx.accounts.smart_wallet;
+        let wallet = &mut ctx.accounts.wallet;
         
         require_eq!(
             ctx.accounts.authority.key(),
@@ -167,7 +167,7 @@ pub mod smart_wallet {
         ctx: Context<UpdateAuthority>,
         new_authority: Pubkey,
     ) -> Result<()> {
-        let wallet = &mut ctx.accounts.smart_wallet;
+        let wallet = &mut ctx.accounts.wallet;
         
         require_eq!(
             ctx.accounts.authority.key(),
@@ -185,7 +185,7 @@ pub mod smart_wallet {
         ctx: Context<UpdateDailyLimit>,
         new_limit: u64,
     ) -> Result<()> {
-        let wallet = &mut ctx.accounts.smart_wallet;
+        let wallet = &mut ctx.accounts.wallet;
         
         require_eq!(
             ctx.accounts.authority.key(),
@@ -250,7 +250,7 @@ pub enum PluginType {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(init, payer = payer, space = 8 + 256)]
-    pub smart_wallet: Account<'info, SmartWallet>,
+    pub wallet: Account<'info, SmartWallet>,
     #[account(mut)]
     pub vault: SystemAccount<'info>,
     #[account(mut)]
@@ -269,7 +269,7 @@ pub struct RegisterAgent<'info> {
 #[derive(Accounts)]
 pub struct TransferSol<'info> {
     #[account(mut)]
-    pub smart_wallet: Account<'info, SmartWallet>,
+    pub wallet: Account<'info, SmartWallet>,
     #[account(mut)]
     pub vault: SystemAccount<'info>,
     #[account(mut)]
@@ -290,21 +290,21 @@ pub struct DepositSol<'info> {
 #[derive(Accounts)]
 pub struct AddPlugin<'info> {
     #[account(mut)]
-    pub smart_wallet: Account<'info, SmartWallet>,
+    pub wallet: Account<'info, SmartWallet>,
     pub authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateAuthority<'info> {
     #[account(mut)]
-    pub smart_wallet: Account<'info, SmartWallet>,
+    pub wallet: Account<'info, SmartWallet>,
     pub authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateDailyLimit<'info> {
     #[account(mut)]
-    pub smart_wallet: Account<'info, SmartWallet>,
+    pub wallet: Account<'info, SmartWallet>,
     pub authority: Signer<'info>,
 }
 

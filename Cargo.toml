@@ -1,12 +1,12 @@
-[package]
-name = "smart-wallet"
-version = "0.1.0"
-edition = "2021"
-
 [workspace]
 members = [
     "programs/smart-wallet",
 ]
+
+[workspace.package]
+name = "smart-wallet"
+version = "0.1.0"
+edition = "2021"
 
 [profile.release]
 opt-level = 3
