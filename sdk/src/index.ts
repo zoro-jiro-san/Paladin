@@ -6,7 +6,8 @@ import {
   Signer,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
-import { AnchorProvider, Program } from "@coral-xyz/anchor";
+import { AnchorProvider, Program, BN } from "@coral-xyz/anchor";
+import * as anchor from "@coral-xyz/anchor";
 import { SmartWalletIDL } from "./idl";
 
 export interface SmartWalletConfig {
@@ -64,7 +65,7 @@ export class SmartWalletClient {
     }
 
     const walletPda = this.derivePda(
-      ["wallet", authority.toBuffer()],
+      [Buffer.from("wallet"), authority.toBuffer()],
       this.programId
     );
 
@@ -373,6 +374,3 @@ export class AgentRegistry {
     return await this.client.getAgentRegistry(this.registryPda);
   }
 }
-
-// Export types
-export type { SmartWalletConfig, TransferOptions, PluginConfig };
