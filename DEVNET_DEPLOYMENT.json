@@ -1,0 +1,9 @@
+{
+  "programId": "4nsD1dKtbA9CpxD5vyN2eVQX7LhvxEWdxPyQJ5r83Kf5",
+  "timestamp": "2026-02-06T15:05:06Z",
+  "network": "devnet",
+  "rpcEndpoint": "https://api.devnet.solana.com",
+  "binaryPath": "./target/release/libsmart_wallet.so",
+  "wallet": "/home/tokisaki/.config/solana/id.json",
+  "status": "prepared"
+}
