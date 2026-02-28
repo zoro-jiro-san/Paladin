@@ -4,6 +4,8 @@ use solana_program::system_instruction;
 
 declare_id!("4nsD1dKtbA9CpxD5vyN2eVQX7LhvxEWdxPyQJ5r83Kf5");
 
+pub const VAULT_SEED: &[u8] = b"vault";
+
 #[program]
 pub mod smart_wallet {
     use super::*;
@@ -21,9 +23,9 @@ pub mod smart_wallet {
         wallet.spent_today = 0;
         wallet.last_reset = Clock::get()?.unix_timestamp;
         wallet.nonce = 0;
-        wallet.bump = 0; // Will be set to proper PDA bump seed if needed
+        wallet.bump = ctx.bumps.vault;
         wallet.plugins = Vec::new();
-        
+
         Ok(())
     }
 
@@ -80,19 +82,25 @@ pub mod smart_wallet {
             SmartWalletError::Unauthorized
         );
 
-        // Transfer SOL
+        // Transfer SOL from the program-derived vault PDA.
+        // A system transfer requires the "from" account to sign, so we must use invoke_signed.
         let ix = system_instruction::transfer(
             &ctx.accounts.vault.key(),
             &ctx.accounts.recipient.key(),
             amount,
         );
-        
-        solana_program::program::invoke(
+
+        let wallet_key = wallet.key();
+        let signer_seeds: &[&[u8]] = &[VAULT_SEED, wallet_key.as_ref(), &[wallet.bump]];
+
+        solana_program::program::invoke_signed(
             &ix,
             &[
                 ctx.accounts.vault.to_account_info(),
                 ctx.accounts.recipient.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
             ],
+            &[signer_seeds],
         )?;
 
         // Update state
@@ -249,10 +257,22 @@ pub enum PluginType {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init, payer = payer, space = 8 + 256)]
+    // NOTE: space here is intentionally generous because `plugins` is variable length.
+    // If you want a tight rent footprint, bound plugins or store them in separate accounts.
+    #[account(init, payer = payer, space = 8 + 2048)]
     pub wallet: Account<'info, SmartWallet>,
-    #[account(mut)]
+
+    // Program-derived SOL vault (PDA). This account holds lamports and signs via `invoke_signed`.
+    #[account(
+        init,
+        payer = payer,
+        seeds = [VAULT_SEED, wallet.key().as_ref()],
+        bump,
+        space = 0,
+        owner = system_program::ID
+    )]
     pub vault: SystemAccount<'info>,
+
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -270,8 +290,15 @@ pub struct RegisterAgent<'info> {
 pub struct TransferSol<'info> {
     #[account(mut)]
     pub wallet: Account<'info, SmartWallet>,
-    #[account(mut)]
+
+    #[account(
+        mut,
+        seeds = [VAULT_SEED, wallet.key().as_ref()],
+        bump = wallet.bump,
+        constraint = vault.key() == wallet.vault @ SmartWalletError::InvalidVault
+    )]
     pub vault: SystemAccount<'info>,
+
     #[account(mut)]
     pub recipient: SystemAccount<'info>,
     pub authority: Signer<'info>,
@@ -280,8 +307,16 @@ pub struct TransferSol<'info> {
 
 #[derive(Accounts)]
 pub struct DepositSol<'info> {
-    #[account(mut)]
+    pub wallet: Account<'info, SmartWallet>,
+
+    #[account(
+        mut,
+        seeds = [VAULT_SEED, wallet.key().as_ref()],
+        bump = wallet.bump,
+        constraint = vault.key() == wallet.vault @ SmartWalletError::InvalidVault
+    )]
     pub vault: SystemAccount<'info>,
+
     #[account(mut)]
     pub depositor: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -331,16 +366,19 @@ pub struct DepositEvent {
 pub enum SmartWalletError {
     #[msg("Daily limit exceeded")]
     DailyLimitExceeded,
-    
+
     #[msg("Unauthorized")]
     Unauthorized,
-    
+
     #[msg("Invalid amount")]
     InvalidAmount,
-    
+
+    #[msg("Invalid vault account for this wallet")]
+    InvalidVault,
+
     #[msg("Plugin validation failed")]
     PluginValidationFailed,
-    
+
     #[msg("Insufficient balance")]
     InsufficientBalance,
 }
